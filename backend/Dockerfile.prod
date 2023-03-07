@@ -1,0 +1,26 @@
+
+FROM node:16-alpine as build
+# Installing libvips-dev for sharp Compatability
+RUN apk update && apk add --no-cache build-base gcc autoconf automake zlib-dev libpng-dev vips-dev > /dev/null 2>&1
+ARG NODE_ENV=production
+ENV NODE_ENV=${NODE_ENV}
+WORKDIR /backend/
+COPY ./package.json ./package-lock.json ./
+ENV PATH /backend/node_modules/.bin:$PATH
+RUN npm install --production
+WORKDIR /backend/app
+COPY ./ .
+RUN npm run build
+
+FROM node:16-alpine
+# Installing libvips-dev for sharp Compatability
+RUN apk add --no-cache vips-dev
+ARG NODE_ENV=production
+ENV NODE_ENV=${NODE_ENV}
+WORKDIR /backend/
+COPY --from=build /backend/node_modules ./node_modules
+ENV PATH /backend/node_modules/.bin:$PATH
+WORKDIR /backend/app
+COPY --from=build /backend/app ./
+EXPOSE 1337
+CMD ["npm", "run","start"]
